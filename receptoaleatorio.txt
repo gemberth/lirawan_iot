@@ -1,0 +1,318 @@
+//LIBRERIA DE LORA
+#include <LoRa.h>
+#include <SPI.h>
+
+//LIBRERIA DE WIFI
+#include <Arduino.h>
+#include <WiFi.h>
+
+//IBRERIA DE FIREBASE
+#include <FirebaseESP32.h>
+
+//#include <Adafruit_BME280.h>
+#include <Adafruit_Sensor.h>
+
+//LIBRERIAS DE OLED
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+// Provide the token generation process info.
+#include "addons/TokenHelper.h"
+
+// Provide the RTDB payload printing info and other helper functions.
+#include "addons/RTDBHelper.h"
+
+// Insert your network credentials
+#define WIFI_SSID "VILLAMAR"
+#define WIFI_PASSWORD "1108dayi2000"
+
+// Insert Firebase project API Key
+#define API_KEY "AIzaSyAKy23WZonQ_dU9mtUAo9Of-mB3wse_4d8"
+
+// Insert Authorized Email and Corresponding Password
+#define USER_EMAIL "villamarpilosolisseth@gmail.com"
+#define USER_PASSWORD "admin123456"
+
+#define HOSTNAME "https://monitoreo-humedad.web.app/"
+
+// Insert RTDB URLefine the RTDB URL
+#define DATABASE_URL "https://monitoreo-humedad-default-rtdb.firebaseio.com"
+
+//PINES DEL MODULO LORA
+#define SCK 5
+#define MISO 19
+#define MOSI 27
+#define SS 18
+#define RST 14
+#define DIO0 26
+
+//FRCUANECIA
+//433E6 for Asia
+//866E6 for Europe
+//915E6 for North America
+#define BAND 433E6
+
+//OLED PINES DE
+#define OLED_SDA 4
+#define OLED_SCL 15
+#define OLED_RST 16
+#define SCREEN_WIDTH 128  // OLED display width, in pixels
+#define SCREEN_HEIGHT 64  // OLED display height, in pixels
+
+
+// Define Firebase objects
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+// Variable to save USER UID
+String uid;
+
+// Variables to save database paths
+String databasePath;
+
+String sensor1Path = "/sensor1Value";
+String sensor2Path = "/sensor2Value";
+String sensor3Path = "/sensor3Value";
+String timePath = "/timestamp";
+
+String parentPath;
+
+int timestamp;
+
+// BME280 sensor
+//Adafruit_BME280 bme; // I2C
+int rssi;
+String LoraMessage;
+
+String sensor1Value;
+String sensor2Value;
+String sensor3Value;
+String readingID;
+
+// float contador =1.0;
+
+FirebaseJson json;
+
+const char* ntpServer = "pool.ntp.org";
+
+// Timer variables (send new readings every three minutes)
+unsigned long sendDataPrevMillis = 0;
+//unsigned long timerDelay = 3600000; //10 minutos
+unsigned long timerDelay = 1000; //1 minuto
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+
+// Initialize WiFi
+void initWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  // Print local IP address and start web server
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  display.setCursor(0, 20);
+  display.print("Access web server de: ");
+  display.setCursor(0, 30);
+  display.print(HOSTNAME);
+  display.display();
+}
+
+//Initialize OLED display
+void startOLED() {
+  //reset OLED display via software
+  pinMode(OLED_RST, OUTPUT);
+  digitalWrite(OLED_RST, LOW);
+  delay(20);
+  digitalWrite(OLED_RST, HIGH);
+
+  //initialize OLED
+  Wire.begin(OLED_SDA, OLED_SCL);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false)) {  // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ;  // Don't proceed, loop forever
+  }
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("LORA SENDER");
+}
+
+int obtenerValorAleatorio() {
+  int valorAleatorio = random(50, 60);  // Genera un número aleatorio entre 50 y 65
+  return valorAleatorio;
+}
+
+//Initialize LoRa module
+void startLoRA() {
+  int counter = 0;
+  //SPI LoRa pins
+  SPI.begin(SCK, MISO, MOSI, SS);
+  //setup LoRa transceiver module
+  LoRa.setPins(SS, RST, DIO0);
+
+  while (!LoRa.begin(BAND) && counter < 10) {
+    Serial.print(".");
+    counter++;
+    delay(500);
+  }
+  if (counter == 10) {
+    // Increment readingID on every new reading
+    Serial.println("Starting LoRa failed!");
+  }
+  Serial.println("LoRa Initialization OK!");
+  display.setCursor(0, 10);
+  display.clearDisplay();
+  display.print("LoRa Initializing OK!");
+  display.display();
+  delay(2000);
+}
+
+// Read LoRa packet and get the sensor readings
+void getLoRaData() {
+  Serial.print("Lora packet received: ");
+
+  sensor1Value = obtenerValorAleatorio();
+  sensor2Value = obtenerValorAleatorio();
+  sensor3Value = obtenerValorAleatorio();
+
+  // Read packet
+  while (LoRa.available()) {
+    String LoRaData = LoRa.readString();
+    Serial.print(LoRaData);  // Imprime los datos recibidos para depuración
+
+    // Split the data using delimiters "/"
+    int pos1 = LoRaData.indexOf('/');
+    if (pos1 != -1) {
+      // Get readingID
+      readingID = LoRaData.substring(0, pos1);
+
+      // Split the remaining data using delimiters "&" and "#"
+      int pos2 = LoRaData.indexOf('&');
+      int pos3 = LoRaData.indexOf('#');
+      if (pos2 != -1 && pos3 != -1) {
+        // Get sensor values
+        sensor1Value = LoRaData.substring(pos1 + 1, pos2);
+        sensor2Value = LoRaData.substring(pos2 + 1, pos3);
+        sensor3Value = LoRaData.substring(pos3 + 1);
+
+
+
+        // Print the sensor values for debugging
+        Serial.print("Sensor 1 Value: ");
+        Serial.println(sensor1Value);
+        Serial.print("Sensor 2 Value: ");
+        Serial.println(sensor2Value);
+        Serial.print("Sensor 3 Value: ");
+        Serial.println(sensor3Value);
+      }
+    }
+  }
+
+  // Get RSSI
+  // Print the sensor values for debugging
+  Serial.print("Sensor 1 : ");
+  Serial.println(sensor1Value);
+  Serial.print("Sensor 2 : ");
+  Serial.println(sensor2Value);
+  Serial.print("Sensor 3 : ");
+  Serial.println(sensor3Value);
+
+  rssi = LoRa.packetRssi();
+  Serial.print(" with RSSI ");
+  Serial.println(rssi);
+}
+
+
+// Function that gets current epoch time
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    //Serial.println("Failed to obtain time");
+    return (0);
+  }
+  time(&now);
+  return now;
+}
+
+void setup() {
+  Serial.begin(115200);
+  startOLED();
+  startLoRA();
+  // Initialize BME280 sensor
+  //initBME();
+  initWiFi();
+
+  configTime(0, 0, ntpServer);
+
+  // Assign the api key (required)
+  config.api_key = API_KEY;
+
+  // Assign the user sign in credentials
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+
+  // Assign the RTDB URL (required)
+  config.database_url = DATABASE_URL;
+
+  // Firebase.reconnectWiFi(true);
+  // fbdo.setResponseSize(4096);
+
+  // Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback;  //see addons/TokenHelper.h
+
+  // Assign the maximum retry of token generation
+  config.max_token_generation_retry = 5;
+
+  // Initialize the library with the Firebase authen and config
+  Firebase.begin(&config, &auth);
+
+  // Getting the user UID might take a few seconds
+  Serial.println("Getting User UID");
+  while ((auth.token.uid) == "") {
+    Serial.print('.');
+    delay(1000);
+  }
+  // Print user UID
+  uid = auth.token.uid.c_str();
+  Serial.print("User UID: ");
+  Serial.println(uid);
+
+  // Update database path
+  databasePath = "/UsersData/" + uid + "/readings";
+}
+
+void loop() {
+  // Send new readings to database
+
+  if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)) {
+    sendDataPrevMillis = millis();
+    getLoRaData();
+
+    //Get current timestamp
+    timestamp = getTime();
+    Serial.print("time: ");
+    Serial.println(timestamp);
+
+    parentPath = databasePath + "/" + String(timestamp);
+
+    json.set(sensor1Path.c_str(), sensor1Value);
+    json.set(sensor2Path.c_str(), sensor2Value);
+    json.set(sensor3Path.c_str(), sensor3Value);
+    json.set(timePath, String(timestamp));
+
+    Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
+  }
+}
+
+
+https://docs.heltec.org/en/node/esp32/quick_start.html#via-arduino-board-manager

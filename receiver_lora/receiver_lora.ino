@@ -25,15 +25,18 @@
 // // Insert RTDB URLefine the RTDB URL
 // #define DATABASE_URL "REPLACE_WITH_YOUR_DATABASE_URL"
 // Insert your network credentials
-#define WIFI_SSID "VILLAMAR"
-#define WIFI_PASSWORD "1108dayi2000"
+
+// #define WIFI_SSID "VILLAMAR"
+// #define WIFI_PASSWORD "1108dayi2000"
+#define WIFI_SSID "lorawam"
+#define WIFI_PASSWORD "12345678"
 
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyAKy23WZonQ_dU9mtUAo9Of-mB3wse_4d8"
 
 // Insert Authorized Email and Corresponding Password
 #define USER_EMAIL "villamarpilosolisseth@gmail.com"
-#define USER_PASSWORD "admin123456"
+#define USER_PASSWORD "123456789"
 
 #define HOSTNAME "https://monitoreo-humedad.web.app/"
 
@@ -68,7 +71,7 @@ float temperature;
 float humidity;
 float pressure;
 unsigned long sendDataPrevMillis = 0;
-unsigned long timerDelay = 180000;
+unsigned long timerDelay = 1000;
 // Initialize WiFi
 void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -96,7 +99,7 @@ unsigned long getTime() {
 
 //------------------------------------------------------
 
-#define RF_FREQUENCY                                915000000 // Hz
+#define RF_FREQUENCY                                433000000 // Hz
 
 #define TX_OUTPUT_POWER                             14        // dBm
 
@@ -191,26 +194,10 @@ void loop()
     Serial.println("into RX mode");
     Radio.Rx(0);
   }
-  Radio.IrqProcess();
   //-------------------------------------------------------------------
   // Send new readings to database
-  if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
-    sendDataPrevMillis = millis();
-
-    //Get current timestamp
-    timestamp = getTime();
-    Serial.print ("time: ");
-    Serial.println (timestamp);
-
-    parentPath= databasePath + "/" + String(timestamp);
- 
-    json.set(tempPath.c_str(),String(temperature)); 
-    json.set(humPath.c_str(),String(humidity)); 
-    json.set(presPath.c_str(),String(pressure)); 
-    json.set(timePath, String(timestamp));
-    Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
-  }  
-
+    Radio.IrqProcess();
+  
 
 }
 
@@ -225,13 +212,27 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 
     
     // byte pos_char[] = {0, 0, 0};
-    byte pos_char[] = {0, 0, 0, 0};
+    
+    // float f_ValHmd = ValHmd.toFloat();
+    // float f_ValTmp = ValTmp.toFloat();
+    if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
+    sendDataPrevMillis = millis();
+    byte pos_char[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     byte numChar = 1;
    //Hmd@65.20@Tmp@21.10
 
     
     for(byte i=0; i<rxSize; i ++) 
     {
+      //--------------------------------------------------------------------TEM 1 2 3
+      if((rxpacket[i]=='@')&&(numChar == 11)){pos_char[10]= i,numChar=12;}
+      if((rxpacket[i]=='@')&&(numChar == 10)){pos_char[9]= i,numChar=11;}
+      if((rxpacket[i]=='@')&&(numChar == 8)){pos_char[8]= i,numChar=10;}
+      if((rxpacket[i]=='@')&&(numChar == 8)){pos_char[7]= i,numChar=9;}
+      if((rxpacket[i]=='@')&&(numChar == 7)){pos_char[6]= i,numChar=8;}
+      if((rxpacket[i]=='@')&&(numChar == 6)){pos_char[5]= i,numChar=7;}
+      //-----------------------------------------------------------------------------BMO
+      if((rxpacket[i]=='@')&&(numChar == 5)){pos_char[4]= i,numChar=6;}
       if((rxpacket[i]=='@')&&(numChar == 4)){pos_char[3]= i,numChar=5;}
       if((rxpacket[i]=='@')&&(numChar == 3)){pos_char[2]= i,numChar=4;}
       if((rxpacket[i]=='@')&&(numChar == 2)){pos_char[1]= i,numChar=3;}
@@ -241,7 +242,11 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 
     // Serial.printf("\r\nnumChar1 \"%d\" numChar2 %d , numChar3 %d\r\n",pos_char[0],pos_char[1],pos_char[2]);
     // Imprime por el puerto serie las posiciones de los caracteres '@' encontrados en la cadena
-    Serial.printf("\r\nnumChar1 \"%d\" numChar2 %d, numChar3 %d, numChar4 %d\r\n", pos_char[0], pos_char[1], pos_char[2], pos_char[3]);
+    // Serial.printf("\r\nnumChar1 \"%d\" numChar2 %d, numChar3 %d, numChar4 %d\r\n", pos_char[0], pos_char[1], pos_char[2], pos_char[3]);
+    // Serial.printf("\r\nnumChar1 \"%d\" numChar2 %d, numChar3 %d, numChar4 %d, numChar5 %d\r\n", pos_char[0], pos_char[1], pos_char[2], pos_char[3], pos_char[4]);
+    Serial.printf("\r\nnumChar1 \"%d\" numChar2 %d, numChar3 %d, numChar4 %d, numChar5 %d, numChar6 %d, numChar7 %d, numChar8 %d, numChar9 %d, numChar10 %d, numChar11 %d\r\n",
+                   pos_char[0], pos_char[1], pos_char[2], pos_char[3], pos_char[4], pos_char[5], pos_char[6], pos_char[7], pos_char[8], pos_char[9], pos_char[10]);
+
 
     // String ValHmd;
     // for(byte i=pos_char[0]+1; i<pos_char[1]; i ++) 
@@ -255,6 +260,9 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     //  ValTmp = ValTmp + char(rxpacket[i]);
     // }
     // Extraer ValHmd de rxpacket
+    //Hmd@68.23@Tmp@26.06@Pre@997.12
+    //Hmd@65.20@Tmp@21.10
+    //012345678901234567890123456789
     String ValHmd;
     for (byte i = pos_char[0] + 1; i < pos_char[1]; i++)
     {
@@ -270,17 +278,31 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 
     String ValPressure;
     // Extraer ValPressure de rxpacket
-    for (byte i = pos_char[3] + 1; i < rxSize; i++)
+// Extraer ValPressure de rxpacket
+    for (byte i = pos_char[4] + 1; i < rxSize; i++)
     {
-        ValPressure += char(rxpacket[i]);
+        ValPressure += rxpacket[i];
     }
 
 
      humidity = ValHmd.toFloat();
      temperature = ValTmp.toFloat();
      pressure = ValPressure.toFloat();
-    // float f_ValHmd = ValHmd.toFloat();
-    // float f_ValTmp = ValTmp.toFloat();
+
+    //Get current timestamp
+    timestamp = getTime();
+    Serial.print ("time: ");
+    Serial.println (timestamp);
+
+    parentPath= databasePath + "/" + String(timestamp);
+ 
+    json.set(tempPath.c_str(),ValTmp); 
+    json.set(humPath.c_str(),ValHmd); 
+    json.set(presPath.c_str(),ValPressure); 
+    json.set(timePath, String(timestamp));
+    Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
+   }  
+
     Serial.print("f_ValHmd: ");
     Serial.println(humidity);
     Serial.print("f_ValTmp: ");

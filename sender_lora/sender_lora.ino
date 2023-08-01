@@ -1,6 +1,10 @@
+// #include <LoRaNode.h>
+// #include <config.h>
+
 // #include <LoRa.h>
 // #include <SPI.h>
-#include "LoRaWan_APP.h"
+#include <LoRaWan_APP.h>
+
 #include "Arduino.h"
 
 #include <Adafruit_Sensor.h>
@@ -10,13 +14,23 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 //BME280 definition
-#define SDA 21
-#define SCL 13
+// #define SDA 21
+// #define SCL 13
 TwoWire I2Cone = TwoWire(1);
 Adafruit_BME280 bme;
 float ValHum = 0;
 float ValTem = 0;
 float ValPressure = 0;
+
+// sensores de humedad config
+// YL-69 sensor pins
+const int sensor1 = 27;
+const int sensor2 = 12;
+const int sensor3 = 13;
+int sensor1Value = 0;
+int sensor2Value = 0;
+int sensor3Value = 0;
+
 
 
 // #define DHTPIN    13
@@ -26,7 +40,7 @@ float ValPressure = 0;
 // float ValHum,ValTem = 0;
 
 
-#define RF_FREQUENCY                                915000000 // Hz
+#define RF_FREQUENCY                                433000000 // Hz
 
 #define TX_OUTPUT_POWER                             5        // dBm
 
@@ -68,8 +82,9 @@ void OnTxTimeout( void );
 //   }
 // }
 void startBME(){
-  if (!bme.begin(0x76)) {
-    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+  bool status = bme.begin(0x76);
+  if (!status) {
+    Serial.println("Could not find a valid BME280 sensor, check wiring or change I2C address!");
     while (1);
   }
 }
@@ -81,9 +96,22 @@ void getReadings(){
   ValPressure = bme.readPressure() / 100.0F;
 }
 //-------------------------------------------------------------------------------
+
+// nuevos sensores --------------------------------------------------
+// void getReadings() {
+//   sensor1Value = analogRead(sensor1);
+//   sensor2Value = analogRead(sensor2);
+//   sensor3Value = analogRead(sensor3);
+// }
+
+
 void setup() {
     Serial.begin(115200);
     Mcu.begin();
+    startBME();
+    pinMode(sensor1, INPUT);
+    pinMode(sensor3, INPUT);
+    pinMode(sensor2, INPUT);
     
 	
     txNumber=0;
@@ -99,7 +127,7 @@ void setup() {
                                    true, 0, 0, LORA_IQ_INVERSION_ON, 3000 ); 
 
     // dht.begin();
-    startBME();
+    
   
    }
 
@@ -116,22 +144,30 @@ void loop()
     //   ValTem = dht.readTemperature();
     ValTem = bme.readTemperature();
     ValHum = bme.readHumidity();
-    ValPressure = bme.readPressure() / 100.0F;
-            
+    ValPressure = bme.readPressure() / 100.0F;            
       if (isnan(ValHum) || isnan(ValTem)) {
         ValHum = 0;
         ValTem = 0;
         ValPressure=0;
         Serial.println(F("Error de lectura del sensor DHT22!"));
       }
+    sensor1Value = analogRead(sensor1);
+    sensor2Value = analogRead(sensor2);
+    sensor3Value = analogRead(sensor3);
+    int sensor1Porcentaje =(isnan(sensor1Value)) ? 0 : (100 - (sensor1Value * 100 / 4095.0)); 
+    int sensor2Porcentaje = (isnan(sensor2Value)) ? 0 : (100 - (sensor2Value * 100 / 4095.0)); 
+    int sensor3Porcentaje = (isnan(sensor3Value)) ? 0 : (100 - (sensor3Value * 100 / 4095.0)); 
           
       Serial.print("Humedad: ");Serial.print(ValHum);Serial.print("%  Temperatura: ");
       Serial.print(ValTem);Serial.println("°C");
       Serial.print("Presion: ");Serial.print(ValPressure);
+      Serial.print("sensor1Porcentaje: ");Serial.print(sensor1Porcentaje);
+      Serial.print("sensor2Porcentaje: ");Serial.print(sensor2Porcentaje);
+      Serial.print("sensor3Porcentaje: ");Serial.print(sensor3Porcentaje);
 
       //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 		  // sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f",ValHum,ValTem);  //start a package
-		  sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f",ValHum,ValTem,ValPressure);  //start a package
+		  sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f@T1@%0.2f@T2@%0.2f@T3@%0.2f",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
 		  Serial.printf("\r\nEnviando Paquete \"%s\" , longitud %d\r\n",txpacket, strlen(txpacket));
 		  Radio.Send( (uint8_t *)txpacket, strlen(txpacket) ); //send the package out	
       lora_idle = false;

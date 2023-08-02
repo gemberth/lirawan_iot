@@ -30,6 +30,7 @@ const int sensor3 = 13;
 int sensor1Value = 0;
 int sensor2Value = 0;
 int sensor3Value = 0;
+int sensor4Value = 0;
 
 
 
@@ -166,6 +167,7 @@ void loop()
     float sensor1Porcentaje = 100 - (sensor1Value * 100 / 4095.0); 
     float sensor2Porcentaje = 100 - (sensor2Value * 100 / 4095.0); 
     float sensor3Porcentaje = 100 - (sensor3Value * 100 / 4095.0); 
+    float sensor4Porcentaje = 100 - (sensor3Value * 100 / 4095.0); 
           
       Serial.print("Humedad: ");Serial.print(ValHum);Serial.print("%  Temperatura: ");
       Serial.print(ValTem);Serial.println("°C");
@@ -176,7 +178,7 @@ void loop()
 
       //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 		  // sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f",ValHum,ValTem,ValPressure);  //start a package
-		  sprintf(txpacket,"h@%0.2f@T@%0.2f@P@%0.2f@T@%0.2f@T@%0.2f@T@%0.2f",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
+		  sprintf(txpacket,"h@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje,sensor4Porcentaje);  //start a package
 		  Serial.printf("\r\nEnviando Paquete \"%s\" , longitud %d\r\n",txpacket, strlen(txpacket));
 		  Radio.Send( (uint8_t *)txpacket, strlen(txpacket) ); //send the package out	
       lora_idle = false;

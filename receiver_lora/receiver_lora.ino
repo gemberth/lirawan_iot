@@ -73,12 +73,12 @@ const char* ntpServer = "pool.ntp.org";
 float temperature;
 float humidity;
 float pressure;
-float v1;
-float v2;
-float v3;
+int v1;
+int v2;
+int v3;
 
 unsigned long sendDataPrevMillis = 0;
-unsigned long timerDelay = 1000;
+unsigned long timerDelay = 10000;
 // Initialize WiFi
 void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -363,10 +363,10 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
      humidity = ValHmd.toFloat();
      temperature = ValTmp.toFloat();
      pressure = ValPressure.toFloat();
-     v1 = ValT1.toFloat();
-     v2 = ValT2.toFloat();
+     v1 = int(ValT1.toFloat());
+     v2 =int(ValT2.toFloat()); 
      String mm= ValT3;
-     v3 = ValT3.toFloat();
+     v3 =int(ValT3.toFloat()); 
 
     //Get current timestamp
     timestamp = getTime();
@@ -381,9 +381,9 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     json.set(humPath.c_str(),ValHmd); 
     json.set(presPath.c_str(),ValPressure); 
 //------------------------------------------------------------------
-    json.set(sensor1Value.c_str(),ValT1); 
-    json.set(sensor2Value.c_str(),ValT2); 
-    json.set(sensor3Value.c_str(),ValT3); 
+    json.set(sensor1Value.c_str(),String(v1)); 
+    json.set(sensor2Value.c_str(),String(v2)); 
+    json.set(sensor3Value.c_str(),String(v3)); 
     json.set(timePath, String(timestamp));
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
    }  

@@ -24,9 +24,9 @@ float ValPressure = 0;
 
 // sensores de humedad config
 // YL-69 sensor pins
-const int sensor1 = 27;
-const int sensor2 = 12;
-const int sensor3 = 13;
+const int sensor1 = 36;
+const int sensor2 = 37;
+const int sensor3 = 38;
 int sensor1Value = 0;
 int sensor2Value = 0;
 int sensor3Value = 0;
@@ -108,9 +108,9 @@ void getReadings(){
 
 void setup() {
     Serial.begin(115200);
-    pinMode(sensor1, INPUT);
-    pinMode(sensor3, INPUT);
-    pinMode(sensor2, INPUT);
+    pinMode(sensor1, INPUT_PULLDOWN);
+    pinMode(sensor3, INPUT_PULLDOWN);
+    pinMode(sensor2, INPUT_PULLDOWN);
     Mcu.begin();
     startBME();
 
@@ -137,12 +137,12 @@ void setup() {
 
 void loop()
 {
-  sensor1Value = analogRead(36);
-  sensor2Value = analogRead(39);
-  sensor3Value = analogRead(34);
+  sensor1Value = analogRead(sensor1);
+  sensor2Value = analogRead(sensor2);
+  sensor3Value = analogRead(sensor3);
 	if(lora_idle == true)
 	{
-    delay(1000);
+    delay(10000);
 
      //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     //  ValHum = dht.readHumidity();
@@ -164,10 +164,10 @@ void loop()
     // int sensor1Porcentaje =(isnan(sensor1Value)) ? 0 : (100 - (sensor1Value * 100 / 4095.0)); 
     // int sensor2Porcentaje = (isnan(sensor2Value)) ? 0 : (100 - (sensor2Value * 100 / 4095.0)); 
     // int sensor3Porcentaje = (isnan(sensor3Value)) ? 0 : (100 - (sensor3Value * 100 / 4095.0)); 
-    float sensor1Porcentaje = 100 - (sensor1Value * 100 / 4095.0); 
-    float sensor2Porcentaje = 100 - (sensor2Value * 100 / 4095.0); 
-    float sensor3Porcentaje = 100 - (sensor3Value * 100 / 4095.0); 
-    float sensor4Porcentaje = 100 - (sensor3Value * 100 / 4095.0); 
+    float sensor1Porcentaje =( 100 - ( (sensor1Value/4095.00) * 100 ) );
+    float sensor2Porcentaje = ( 100 - ( (sensor2Value/4095.00) * 100 ) );
+    float sensor3Porcentaje = ( 100 - ( (sensor3Value/4095.00) * 100 ) ); 
+    float mm = 11.11; 
           
       Serial.print("Humedad: ");Serial.print(ValHum);Serial.print("%  Temperatura: ");
       Serial.print(ValTem);Serial.println("°C");
@@ -178,7 +178,7 @@ void loop()
 
       //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 		  // sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f",ValHum,ValTem,ValPressure);  //start a package
-		  sprintf(txpacket,"h@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje,sensor4Porcentaje);  //start a package
+		  sprintf(txpacket,"h@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@p",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
 		  Serial.printf("\r\nEnviando Paquete \"%s\" , longitud %d\r\n",txpacket, strlen(txpacket));
 		  Radio.Send( (uint8_t *)txpacket, strlen(txpacket) ); //send the package out	
       lora_idle = false;

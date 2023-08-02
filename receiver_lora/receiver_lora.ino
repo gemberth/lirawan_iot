@@ -57,6 +57,9 @@ String databasePath;
 String tempPath = "/temperature";
 String humPath = "/humidity";
 String presPath = "/pressure";
+String sensor1Value = "/sensor1Value";
+String sensor2Value = "/sensor2Value";
+String sensor3Value = "/sensor3Value";
 String timePath = "/timestamp";
 
 // Parent Node (to be updated in every loop)
@@ -70,6 +73,10 @@ const char* ntpServer = "pool.ntp.org";
 float temperature;
 float humidity;
 float pressure;
+float v1;
+float v2;
+float v3;
+
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 1000;
 // Initialize WiFi
@@ -217,26 +224,34 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     // float f_ValTmp = ValTmp.toFloat();
     if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
     sendDataPrevMillis = millis();
-    byte pos_char[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    //byte pos_char[] = {1, 7, 9, 15, 17, 24, 26, 32, 34, 40, 42};
     byte numChar = 1;
-   //Hmd@65.20@Tmp@21.10
+      // Convertir el array de int a byte
+    int originalArray[] = {1, 7, 9, 15, 17, 24, 26, 32, 34, 40, 42};
+    byte pos_char[11];
+    for (int i = 0; i < 11; i++) {
+      pos_char[i] = (byte)originalArray[i];
+    }
 
-    
+   //Hmd@65.20@Tmp@21.10
+   //h@71.09@T@26.45@P@998.37@T@88.91@T@98.22@T@100.00
+  // 0123456789012345678901234567890123456789012345678
+    //         1         2         3         4    
     for(byte i=0; i<rxSize; i ++) 
     {
       //--------------------------------------------------------------------TEM 1 2 3
-      if((rxpacket[i]=='@')&&(numChar == 11)){pos_char[10]= i,numChar=12;}
-      if((rxpacket[i]=='@')&&(numChar == 10)){pos_char[9]= i,numChar=11;}
-      if((rxpacket[i]=='@')&&(numChar == 8)){pos_char[8]= i,numChar=10;}
-      if((rxpacket[i]=='@')&&(numChar == 8)){pos_char[7]= i,numChar=9;}
-      if((rxpacket[i]=='@')&&(numChar == 7)){pos_char[6]= i,numChar=8;}
-      if((rxpacket[i]=='@')&&(numChar == 6)){pos_char[5]= i,numChar=7;}
-      //-----------------------------------------------------------------------------BMO
-      if((rxpacket[i]=='@')&&(numChar == 5)){pos_char[4]= i,numChar=6;}
-      if((rxpacket[i]=='@')&&(numChar == 4)){pos_char[3]= i,numChar=5;}
-      if((rxpacket[i]=='@')&&(numChar == 3)){pos_char[2]= i,numChar=4;}
-      if((rxpacket[i]=='@')&&(numChar == 2)){pos_char[1]= i,numChar=3;}
-      if((rxpacket[i]=='@')&&(numChar == 1)){pos_char[0]= i,numChar=2;}
+      // if((rxpacket[i]=='@')&&(numChar == 11)){pos_char[10]= i,numChar=12;}
+      // if((rxpacket[i]=='@')&&(numChar == 10)){pos_char[9]= i,numChar=11;}
+      // if((rxpacket[i]=='@')&&(numChar == 9)){pos_char[8]= i,numChar=10;}
+      // if((rxpacket[i]=='@')&&(numChar == 8)){pos_char[7]= i,numChar=9;}
+      // if((rxpacket[i]=='@')&&(numChar == 7)){pos_char[6]= i,numChar=8;}
+      // if((rxpacket[i]=='@')&&(numChar == 6)){pos_char[5]= i,numChar=7;}
+      // //-----------------------------------------------------------------------------BMO
+      // if((rxpacket[i]=='@')&&(numChar == 5)){pos_char[4]= i,numChar=6;}
+      // if((rxpacket[i]=='@')&&(numChar == 4)){pos_char[3]= i,numChar=5;}
+      // if((rxpacket[i]=='@')&&(numChar == 3)){pos_char[2]= i,numChar=4;}
+      // if((rxpacket[i]=='@')&&(numChar == 2)){pos_char[1]= i,numChar=3;}
+      // if((rxpacket[i]=='@')&&(numChar == 1)){pos_char[0]= i,numChar=2;}
       //Serial.println("dd");
     }
 
@@ -260,9 +275,12 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     //  ValTmp = ValTmp + char(rxpacket[i]);
     // }
     // Extraer ValHmd de rxpacket
-    //Hmd@68.23@Tmp@26.06@Pre@997.12
+    //Hmd@68.23@Tmp@26.06@Pre@997.12@T1@%0.2f@T2@%0.2f@T3@%0.2f
     //Hmd@65.20@Tmp@21.10
     //012345678901234567890123456789
+    String ValT1;
+    String ValT2;
+    String ValT3;
     String ValHmd;
     for (byte i = pos_char[0] + 1; i < pos_char[1]; i++)
     {
@@ -279,15 +297,35 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     String ValPressure;
     // Extraer ValPressure de rxpacket
 // Extraer ValPressure de rxpacket
-    for (byte i = pos_char[4] + 1; i < rxSize; i++)
+    for (byte i = pos_char[4] + 1; i < pos_char[5]; i++)
     {
         ValPressure += rxpacket[i];
     }
+    //Hmd@68.23@Tmp@26.06@Pre@997.12@T1@%0.2f@T2@%0.2f@T3@%0.2f
+    //Hmd@65.20@Tmp@21.10
+    //012345678901234567890123456789
+ //      0     1   2     3   4      5  6     7  8     9  10     rxSize
+
+    for (byte i = pos_char[6] + 1; i < pos_char[7]; i++)
+    {
+        ValT1 += rxpacket[i];
+    }
 
 
+        for (byte i = pos_char[8] + 1; i < pos_char[9]; i++)
+    {
+        ValT2 += rxpacket[i];
+    }
+        for (byte i = pos_char[10] + 1; i < rxSize; i++)
+    {
+        ValT3 += rxpacket[i];
+    }
      humidity = ValHmd.toFloat();
      temperature = ValTmp.toFloat();
      pressure = ValPressure.toFloat();
+     v1 = ValT1.toFloat();
+     v2 = ValT2.toFloat();
+     v3 = ValT3.toFloat();
 
     //Get current timestamp
     timestamp = getTime();
@@ -299,6 +337,10 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     json.set(tempPath.c_str(),ValTmp); 
     json.set(humPath.c_str(),ValHmd); 
     json.set(presPath.c_str(),ValPressure); 
+//------------------------------------------------------------------
+    json.set(sensor1Value.c_str(),ValT1); 
+    json.set(sensor2Value.c_str(),ValT2); 
+    json.set(sensor3Value.c_str(),ValT3); 
     json.set(timePath, String(timestamp));
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
    }  
@@ -309,6 +351,12 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     Serial.println(temperature);
     Serial.print("f_ValPressure: ");
     Serial.println(pressure);
+    Serial.print("ValT1: ");
+    Serial.println(v1);
+    Serial.print("ValT2: ");
+    Serial.println(v2);
+    Serial.print("v3: ");
+    Serial.println(v3);
 
     // Serial.print("f_ValHmd: ");Serial.println(f_ValHmd);
     // Serial.print("f_ValTmp: ");Serial.println(f_ValTmp);

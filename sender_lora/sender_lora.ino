@@ -107,11 +107,12 @@ void getReadings(){
 
 void setup() {
     Serial.begin(115200);
-    Mcu.begin();
-    startBME();
     pinMode(sensor1, INPUT);
     pinMode(sensor3, INPUT);
     pinMode(sensor2, INPUT);
+    Mcu.begin();
+    startBME();
+
     
 	
     txNumber=0;
@@ -128,13 +129,16 @@ void setup() {
 
     // dht.begin();
     
-  
+
    }
 
 
 
 void loop()
 {
+  sensor1Value = analogRead(36);
+  sensor2Value = analogRead(39);
+  sensor3Value = analogRead(34);
 	if(lora_idle == true)
 	{
     delay(1000);
@@ -142,6 +146,7 @@ void loop()
      //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     //  ValHum = dht.readHumidity();
     //   ValTem = dht.readTemperature();
+
     ValTem = bme.readTemperature();
     ValHum = bme.readHumidity();
     ValPressure = bme.readPressure() / 100.0F;            
@@ -151,23 +156,27 @@ void loop()
         ValPressure=0;
         Serial.println(F("Error de lectura del sensor DHT22!"));
       }
-    sensor1Value = analogRead(sensor1);
-    sensor2Value = analogRead(sensor2);
-    sensor3Value = analogRead(sensor3);
-    int sensor1Porcentaje =(isnan(sensor1Value)) ? 0 : (100 - (sensor1Value * 100 / 4095.0)); 
-    int sensor2Porcentaje = (isnan(sensor2Value)) ? 0 : (100 - (sensor2Value * 100 / 4095.0)); 
-    int sensor3Porcentaje = (isnan(sensor3Value)) ? 0 : (100 - (sensor3Value * 100 / 4095.0)); 
+
+    // int sensor1 =  // Pin analógico A0 en la placa Heltec ESP32 LoRa
+    // int sensor2 =  // Pin analógico A3 en la placa Heltec ESP32 LoRa
+    // int sensor3 = 
+    // int sensor1Porcentaje =(isnan(sensor1Value)) ? 0 : (100 - (sensor1Value * 100 / 4095.0)); 
+    // int sensor2Porcentaje = (isnan(sensor2Value)) ? 0 : (100 - (sensor2Value * 100 / 4095.0)); 
+    // int sensor3Porcentaje = (isnan(sensor3Value)) ? 0 : (100 - (sensor3Value * 100 / 4095.0)); 
+    float sensor1Porcentaje = 100 - (sensor1Value * 100 / 4095.0); 
+    float sensor2Porcentaje = 100 - (sensor2Value * 100 / 4095.0); 
+    float sensor3Porcentaje = 100 - (sensor3Value * 100 / 4095.0); 
           
       Serial.print("Humedad: ");Serial.print(ValHum);Serial.print("%  Temperatura: ");
       Serial.print(ValTem);Serial.println("°C");
       Serial.print("Presion: ");Serial.print(ValPressure);
-      Serial.print("sensor1Porcentaje: ");Serial.print(sensor1Porcentaje);
-      Serial.print("sensor2Porcentaje: ");Serial.print(sensor2Porcentaje);
-      Serial.print("sensor3Porcentaje: ");Serial.print(sensor3Porcentaje);
+      // Serial.print("sensor1Porcentaje: ");Serial.print(sensor1Porcentaje);
+      // Serial.print("sensor2Porcentaje: ");Serial.print(sensor2Porcentaje);
+      // Serial.print("sensor3Porcentaje: ");Serial.print(sensor3Porcentaje);
 
       //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-		  // sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f",ValHum,ValTem);  //start a package
-		  sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f@T1@%0.2f@T2@%0.2f@T3@%0.2f",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
+		  // sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f",ValHum,ValTem,ValPressure);  //start a package
+		  sprintf(txpacket,"h@%0.2f@T@%0.2f@P@%0.2f@T@%0.2f@T@%0.2f@T@%0.2f",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
 		  Serial.printf("\r\nEnviando Paquete \"%s\" , longitud %d\r\n",txpacket, strlen(txpacket));
 		  Radio.Send( (uint8_t *)txpacket, strlen(txpacket) ); //send the package out	
       lora_idle = false;

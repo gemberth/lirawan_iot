@@ -17,10 +17,10 @@
 // #define SDA 21
 // #define SCL 13
 TwoWire I2Cone = TwoWire(1);
-Adafruit_BME280 bme;
-float ValHum = 0;
-float ValTem = 0;
-float ValPressure = 0;
+// Adafruit_BME280 bme;
+// float ValHum = 0;
+// float ValTem = 0;
+// float ValPressure = 0;
 
 // sensores de humedad config
 // YL-69 sensor pins
@@ -82,20 +82,20 @@ void OnTxTimeout( void );
 //     while (1);
 //   }
 // }
-void startBME(){
-  bool status = bme.begin(0x76);
-  if (!status) {
-    Serial.println("Could not find a valid BME280 sensor, check wiring or change I2C address!");
-    while (1);
-  }
-}
+// void startBME(){
+//   bool status = bme.begin(0x76);
+//   if (!status) {
+//     Serial.println("Could not find a valid BME280 sensor, check wiring or change I2C address!");
+//     while (1);
+//   }
+// }
 
 
-void getReadings(){
-  ValTem = bme.readTemperature();
-  ValHum = bme.readHumidity();
-  ValPressure = bme.readPressure() / 100.0F;
-}
+// void getReadings(){
+//   ValTem = bme.readTemperature();
+//   ValHum = bme.readHumidity();
+//   ValPressure = bme.readPressure() / 100.0F;
+// }
 //-------------------------------------------------------------------------------
 
 // nuevos sensores --------------------------------------------------
@@ -112,7 +112,7 @@ void setup() {
     pinMode(sensor3, INPUT_PULLDOWN);
     pinMode(sensor2, INPUT_PULLDOWN);
     Mcu.begin();
-    startBME();
+    // startBME();
 
     
 	
@@ -148,15 +148,15 @@ void loop()
     //  ValHum = dht.readHumidity();
     //   ValTem = dht.readTemperature();
 
-    ValTem = bme.readTemperature();
-    ValHum = bme.readHumidity();
-    ValPressure = bme.readPressure() / 100.0F;            
-      if (isnan(ValHum) || isnan(ValTem)) {
-        ValHum = 0;
-        ValTem = 0;
-        ValPressure=0;
-        Serial.println(F("Error de lectura del sensor DHT22!"));
-      }
+    // ValTem = bme.readTemperature();
+    // ValHum = bme.readHumidity();
+    // ValPressure = bme.readPressure() / 100.0F;            
+    //   if (isnan(ValHum) || isnan(ValTem)) {
+    //     ValHum = 0;
+    //     ValTem = 0;
+    //     ValPressure=0;
+    //     Serial.println(F("Error de lectura del sensor DHT22!"));
+    //   }
 
     // int sensor1 =  // Pin analógico A0 en la placa Heltec ESP32 LoRa
     // int sensor2 =  // Pin analógico A3 en la placa Heltec ESP32 LoRa
@@ -167,18 +167,18 @@ void loop()
     float sensor1Porcentaje =( 100 - ( (sensor1Value/4095.00) * 100 ) );
     float sensor2Porcentaje = ( 100 - ( (sensor2Value/4095.00) * 100 ) );
     float sensor3Porcentaje = ( 100 - ( (sensor3Value/4095.00) * 100 ) ); 
-    float mm = 11.11; 
+    // float mm = 11.11; 
           
-      Serial.print("Humedad: ");Serial.print(ValHum);Serial.print("%  Temperatura: ");
-      Serial.print(ValTem);Serial.println("°C");
-      Serial.print("Presion: ");Serial.print(ValPressure);
+      Serial.print("sensor1Porcentaje: ");Serial.print(sensor1Porcentaje);Serial.print("%  sensor2Porcentaje: ");
+      Serial.print(sensor2Porcentaje);Serial.println("°C");
+      Serial.print("sensor3Porcentaje: ");Serial.print(sensor3Porcentaje);
       // Serial.print("sensor1Porcentaje: ");Serial.print(sensor1Porcentaje);
       // Serial.print("sensor2Porcentaje: ");Serial.print(sensor2Porcentaje);
       // Serial.print("sensor3Porcentaje: ");Serial.print(sensor3Porcentaje);
 
       //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 		  // sprintf(txpacket,"Hmd@%0.2f@Tmp@%0.2f@Pre@%0.2f",ValHum,ValTem,ValPressure);  //start a package
-		  sprintf(txpacket,"h@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@p",ValHum,ValTem,ValPressure,sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
+		  sprintf(txpacket,"t@%0.2f@%0.2f@%0.2f@",sensor1Porcentaje,sensor2Porcentaje,sensor3Porcentaje);  //start a package
 		  Serial.printf("\r\nEnviando Paquete \"%s\" , longitud %d\r\n",txpacket, strlen(txpacket));
 		  Radio.Send( (uint8_t *)txpacket, strlen(txpacket) ); //send the package out	
       lora_idle = false;

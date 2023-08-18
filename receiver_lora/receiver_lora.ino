@@ -54,12 +54,12 @@ String uid;
 // Database main path (to be updated in setup with the user UID)
 String databasePath;
 // Database child nodes
-String tempPath = "/temperature";
-String humPath = "/humidity";
-String presPath = "/pressure";
-String sensor1Value = "/sensor1Value";
-String sensor2Value = "/sensor2Value";
-String sensor3Value = "/sensor3Value";
+// String tempPath = "/temperature";
+// String humPath = "/humidity";
+String area1 = "/area1";
+String area2 = "/area2";
+String area3 = "/area3";
+String frecuencia = "/frecuencia";
 String timePath = "/timestamp";
 
 // Parent Node (to be updated in every loop)
@@ -73,9 +73,10 @@ const char* ntpServer = "pool.ntp.org";
 float temperature;
 float humidity;
 float pressure;
-int v1;
-int v2;
-int v3;
+int t1;
+int t2;
+int t3;
+int fre;
 
 unsigned long sendDataPrevMillis = 0;
 unsigned long timerDelay = 10000;
@@ -227,11 +228,12 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     // byte pos_char[] = { 0, 0, 0, 0, 0, 0};
     byte numChar = 1;
     //  Convertir el array de int a byte
-    int originalArray[] = {1, 7, 13, 20, 26, 31};
+    int originalArray[] = {1, 7, 13,0,0,0};
     byte pos_char[6];
     for (int i = 0; i < 11; i++) {
       pos_char[i] = (byte)originalArray[i];
     }
+   //t@%0.2f@%0.2f@%0.2f
 //   h@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f@%0.2f
    //Hmd@65.20@Tmp@21.10
    //h@71.09@T@26.45@P@998.37@T@88.91@T@98.22@T@100.00
@@ -318,9 +320,7 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     //Hmd@68.23@Tmp@26.06@Pre@997.12@T1@%0.2f@T2@%0.2f@T3@%0.2f
     //Hmd@65.20@Tmp@21.10
     //012345678901234567890123456789
-    String ValT1;
-    String ValT2;
-    String ValT3;
+
     String ValHmd;
     for (byte i = pos_char[0] + 1; i < pos_char[1]; i++)
     {
@@ -346,60 +346,57 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
     //012345678901234567890123456789
  //      0     1   2     3   4      5  6     7  8     9  10     rxSize
 
-    for (byte i = pos_char[3] + 1; i < pos_char[4]; i++)
-    {
-        ValT1 += char(rxpacket[i]);
-    }
+    // for (byte i = pos_char[3] + 1; i < pos_char[4]; i++)
+    // {
+    //     ValT1 += char(rxpacket[i]);
+    // }
 
 
-        for (byte i = pos_char[4] + 1; i < pos_char[5]; i++)
-    {
-        ValT2 += char(rxpacket[i]);
-    }
-        for (byte i = pos_char[5]+1; i < rxSize; i++)
-    {
-        ValT3 += char(rxpacket[i]);
-    }
-     humidity = ValHmd.toFloat();
-     temperature = ValTmp.toFloat();
-     pressure = ValPressure.toFloat();
-     v1 = int(ValT1.toFloat());
-     v2 =int(ValT2.toFloat()); 
-     String mm= ValT3;
-     v3 =int(ValT3.toFloat()); 
-
+    //     for (byte i = pos_char[4] + 1; i < pos_char[5]; i++)
+    // {
+    //     ValT2 += char(rxpacket[i]);
+    // }
+    //     for (byte i = pos_char[5]+1; i < rxSize; i++)
+    // {
+    //     ValT3 += char(rxpacket[i]);
+    //  fre 
+    //     rssi
+    // }
+      t1 =int(ValHmd.toFloat());
+      t2 =int( ValTmp.toFloat());
+      t3 = int(ValPressure.toFloat());
+      fre = int(rssi);
+ 
     //Get current timestamp
     timestamp = getTime();
     Serial.print ("time: ");
     Serial.println (timestamp);
-     Serial.print ("mmmmmmmmmmmm: ");
-    Serial.println (mm);
+    //  Serial.print ("mmmmmmmmmmmm: ");
+    // Serial.println (mm);
 
     parentPath= databasePath + "/" + String(timestamp);
  
-    json.set(tempPath.c_str(),ValTmp); 
-    json.set(humPath.c_str(),ValHmd); 
-    json.set(presPath.c_str(),ValPressure); 
+    // json.set(tempPath.c_str(),t1); 
+    // json.set(humPath.c_str(),t2); 
+    // json.set(presPath.c_str(),t3); 
 //------------------------------------------------------------------
-    json.set(sensor1Value.c_str(),String(v1)); 
-    json.set(sensor2Value.c_str(),String(v2)); 
-    json.set(sensor3Value.c_str(),String(v3)); 
+    json.set(area1.c_str(),String(t1)); 
+    json.set(area2.c_str(),String(t2)); 
+    json.set(area3.c_str(),String(t3)); 
+    json.set(frecuencia.c_str(),String(fre)); 
     json.set(timePath, String(timestamp));
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
    }  
 
-    Serial.print("f_ValHmd: ");
-    Serial.println(humidity);
-    Serial.print("f_ValTmp: ");
-    Serial.println(temperature);
-    Serial.print("f_ValPressure: ");
-    Serial.println(pressure);
-    Serial.print("ValT1: ");
-    Serial.println(v1);
-    Serial.print("ValT2: ");
-    Serial.println(v2);
-    Serial.print("v3: ");
-    Serial.println(v3);
+    Serial.print("t1: ");
+    Serial.println(t1);
+    Serial.print("t2: ");
+    Serial.println(t2);
+    Serial.print("t3: ");
+    Serial.println(t3);
+    Serial.print("fre: ");
+    Serial.println(fre);
+
 
     // Serial.print("f_ValHmd: ");Serial.println(f_ValHmd);
     // Serial.print("f_ValTmp: ");Serial.println(f_ValTmp);
